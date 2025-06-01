@@ -8,7 +8,8 @@ document.getElementById("contact-form").addEventListener("submit", async functio
   };
 
   try {
-    const response = await fetch("http://localhost:3000/contact", {
+    // Use relative URL (not localhost!)
+    const response = await fetch("/contact", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
