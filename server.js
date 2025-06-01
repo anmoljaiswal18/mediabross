@@ -10,11 +10,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the root (like assets, vendor)
-app.use(express.static(path.join(__dirname, "assets")));
-app.use(express.static(path.join(__dirname, "vendor")));
+// Serve static files from /assets and /vendor
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/vendor', express.static(path.join(__dirname, 'vendor')));
 
-// Serve the index.html file for GET /
+// Serve index.html for GET /
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
@@ -38,7 +38,7 @@ const contactSchema = new mongoose.Schema({
 });
 const Contact = mongoose.model("Contact", contactSchema);
 
-// Contact route
+// Contact form route
 app.post("/contact", async (req, res) => {
   try {
     const contact = new Contact(req.body);
