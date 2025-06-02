@@ -14,7 +14,13 @@ const moviePosters = [
             { title: "Brand Logo", image: "assets/banner-img/b13.jpg", type: "portrait" },
             { title: "Hollywood Crausal", image: "assets/banner-img/b14.jpg", type: "portrait" },
             { title: "Hollywood Crausal", image: "assets/banner-img/b15.jpg", type: "portrait" },
-            { title: "Hollywood Meme", image: "assets/banner-img/b16.jpg", type: "portrait" }
+            { title: "Hollywood Meme", image: "assets/banner-img/b16.jpg", type: "portrait" },
+            { title: "Bollywood Crausal", image: "assets/banner-img/b17.jpg", type: "square" },
+            { title: "Bollywood Meme", image: "assets/banner-img/b18.jpg", type: "square" },
+            { title: "Hollywood Meme", image: "assets/banner-img/b19.jpg", type: "square" },
+            { title: "Bollywood Crausal", image: "assets/banner-img/b20.jpg", type: "square" },
+            { title: "Hollywood Crausal", image: "assets/banner-img/b21.jpg", type: "square" },
+            { title: "Bollywood Hipe", image: "assets/banner-img/b22.jpg", type: "square" }
         ];
 
         function createPoster(poster) {
