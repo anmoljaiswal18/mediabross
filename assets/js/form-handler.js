@@ -8,7 +8,7 @@ document.getElementById("contact-form").addEventListener("submit", async functio
     };
 
     try {
-      const response = await fetch("https://mediabross-backend.vercel.app/contact", {
+      const response = await fetch("https://mediabross-backend.onrender.com/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
