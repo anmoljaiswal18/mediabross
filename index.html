@@ -538,7 +538,7 @@ https://templatemo.com/tm-586-scholar
         </div>
         <div class="col-lg-6">
           <div class="contact-us-content">
-  <form id="contact-form" action="https://mediabross-backend.onrender.com/contact" method="POST">
+  <form id="contact-form" action="https://mediabross-backend.onrender.com/api/contact" method="POST">
     <div class="row">
       <div class="col-lg-12">
         <fieldset>
@@ -603,7 +603,7 @@ https://templatemo.com/tm-586-scholar
     const data = Object.fromEntries(formData.entries());
 
     try {
-      const res = await fetch("https://mediabross-backend.onrender.com/contact", {
+      const res = await fetch("https://mediabross-backend.onrender.com/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
