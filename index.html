@@ -538,13 +538,35 @@ https://templatemo.com/tm-586-scholar
         </div>
         <div class="col-lg-6">
           <div class="contact-us-content">
-            <form action="https://mediabross-backend.onrender.com/contact" method="POST">
-               <input type="text" name="name" placeholder="Your Name..." required>
-               <input type="email" name="email" placeholder="Your Email..." required>
-               <textarea name="message" placeholder="Your Message"></textarea>
-               <button type="submit">Send Message Now</button>
-            </form>
-          </div>
+  <form id="contact-form" action="https://mediabross-backend.onrender.com/contact" method="POST">
+    <div class="row">
+      <div class="col-lg-12">
+        <fieldset>
+          <input type="text" name="name" id="name" placeholder="Your Name..." required />
+        </fieldset>
+      </div>
+      <div class="col-lg-12">
+        <fieldset>
+          <input type="email" name="email" id="email" placeholder="Your E-mail..." required />
+        </fieldset>
+      </div>
+      <div class="col-lg-12">
+        <fieldset>
+          <textarea name="message" id="message" placeholder="Your Message"></textarea>
+        </fieldset>
+      </div>
+      <div class="col-lg-12">
+        <fieldset>
+          <button type="submit" id="form-submit" class="orange-button">Send Message Now</button>
+        </fieldset>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Success/Failure Message -->
+<p id="responseMessage" style="color: green; margin-top: 10px;"></p>
+
         </div>
       </div>
     </div>
@@ -570,6 +592,37 @@ https://templatemo.com/tm-586-scholar
   <script src="/assets/js/gallery.js"></script>
   <script src="/assets/js/form-handler.js"></script>
   <script defer src="/_vercel/insights/script.js"></script>
+  <script>
+  const form = document.getElementById("contact-form");
+  const responseMessage = document.getElementById("responseMessage");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault(); // stop page reload
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      const res = await fetch("https://mediabross-backend.onrender.com/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        responseMessage.textContent = "✅ Thank you! Your message has been sent.";
+        responseMessage.style.color = "green";
+        form.reset();
+      } else {
+        responseMessage.textContent = "❌ Something went wrong. Please try again.";
+        responseMessage.style.color = "red";
+      }
+    } catch (error) {
+      responseMessage.textContent = "❌ Server error. Please try later.";
+      responseMessage.style.color = "red";
+    }
+  });
+</script>
 
 
 
