@@ -28,9 +28,3 @@ document.getElementById("contact-form").addEventListener("submit", async functio
     }
   });
 
-const contactSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  message: String,
-}, { timestamps: true }); // adds createdAt and updatedAt fields
-
