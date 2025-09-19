@@ -1,13 +1,10 @@
 // form-handler.js
 
 document.addEventListener("DOMContentLoaded", () => {
-  const ENDPOINT = "https://mediabross-backend.onrender.com/api/contact"; // ✅ correct backend route
+  const ENDPOINT = "https://mediabross-backend.onrender.com/api/contact"; // ✅ backend route
 
   const form = document.getElementById("contact-form");
-  if (!form) {
-    console.error("contact-form not found. Make sure your form has id='contact-form'");
-    return;
-  }
+  if (!form) return;
 
   // POST helper with timeout
   async function postWithTimeout(url, data, timeout = 10000) {
@@ -30,9 +27,13 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const name = (document.getElementById("name") || {}).value.trim();
-    const email = (document.getElementById("email") || {}).value.trim();
-    const message = (document.getElementById("message") || {}).value.trim();
+    const nameField = document.getElementById("name");
+    const emailField = document.getElementById("email");
+    const messageField = document.getElementById("message");
+
+    const name = (nameField ? nameField.value : "").trim();
+    const email = (emailField ? emailField.value : "").trim();
+    const message = (messageField ? messageField.value : "").trim();
 
     if (!name || !email || !message) {
       alert("Please fill in name, email, and message.");
@@ -42,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const payload = { name, email, message };
 
     try {
-      console.log("Posting to", ENDPOINT, payload);
       const res = await postWithTimeout(ENDPOINT, payload, 10000);
 
       if (!res) {
@@ -58,27 +58,18 @@ document.addEventListener("DOMContentLoaded", () => {
         body = await res.text().catch(() => null);
       }
 
-      console.log("Server responded:", res.status, body);
-
       if (res.ok) {
-        const successMsg = (body && body.message) ? body.message : "Message sent successfully!";
+        const successMsg = `Hello ${name}, your message was sent successfully! 💖 Thanks for filling the form.`;
         alert(successMsg);
         form.reset();
       } else {
-        let err = `Error ${res.status} ${res.statusText}`;
-        if (body) {
-          if (typeof body === "string" && body.trim()) err += ` - ${body}`;
-          else if (body.message) err += ` - ${body.message}`;
-        }
-        console.error(err);
-        alert("Error sending message. Check console for details.");
+        alert("Error sending message. Please try again.");
       }
     } catch (err) {
-      console.error("Request failed:", err);
       if (err.name === "AbortError") {
-        alert("Request timed out. Please check your network and try again.");
+        alert("Request timed out. Please try again.");
       } else {
-        alert("Server error. Check console for more info.");
+        alert("Server error. Please try again.");
       }
     }
   });
