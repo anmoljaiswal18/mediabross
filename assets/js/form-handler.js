@@ -1,7 +1,7 @@
 // form-handler.js
 
 document.addEventListener("DOMContentLoaded", () => {
-  const ENDPOINT = "https://mediabross-backend.onrender.com/api/contact"; // ✅ backend route
+  const ENDPOINT = "https://mediabross-backend.onrender.com"; // ✅ backend route
   const form = document.getElementById("contact-form");
   if (!form) return;
 
