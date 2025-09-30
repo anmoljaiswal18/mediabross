@@ -1,4 +1,4 @@
-// form-handler.js (improved)
+// form-handler.js (final improved version)
 
 document.addEventListener("DOMContentLoaded", () => {
   const ENDPOINT = "https://mediabross-backend.onrender.com/api/contact";
@@ -13,18 +13,19 @@ document.addEventListener("DOMContentLoaded", () => {
     submitBtn.textContent = isSubmitting ? "Sending..." : "Send Message Now";
   }
 
-  async function postWithTimeout(url, data, timeout = 10000, signal = null) {
+  // Single attempt with AbortController
+  async function postWithTimeout(url, data, timeout = 15000) {
     const controller = new AbortController();
-    const combinedSignal = signal || controller.signal;
-    const timer = setTimeout(() => controller.abort(), timeout);
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, timeout);
 
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-        signal: combinedSignal,
-        // mode: "cors" // default is usually fine; add if you customized CORS elsewhere
+        signal: controller.signal,
       });
       return res;
     } finally {
@@ -32,16 +33,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // retry once on network/timeout with exponential backoff
-  async function sendPayloadWithRetry(payload, timeout = 10000) {
-    try {
-      return await postWithTimeout(ENDPOINT, payload, timeout);
-    } catch (err) {
-      console.warn("First attempt failed:", err);
-      // retry once after short delay (backoff)
-      await new Promise(r => setTimeout(r, 1500));
-      return postWithTimeout(ENDPOINT, payload, timeout * 2);
+  // Retry wrapper: retries once on timeout/network error
+  async function sendPayloadWithRetry(payload, opts = {}) {
+    const timeout = opts.timeout || 15000;
+    const maxAttempts = opts.attempts || 2;
+    let attempt = 0;
+    let lastError = null;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        console.info(`Attempt ${attempt}/${maxAttempts} (timeout ${timeout}ms)`);
+        const res = await postWithTimeout(ENDPOINT, payload, timeout);
+        return res;
+      } catch (err) {
+        lastError = err;
+        if (err.name === "AbortError") {
+          console.warn(`Attempt ${attempt} aborted (timeout).`);
+        } else if (err instanceof TypeError) {
+          console.warn(`Attempt ${attempt} network error:`, err.message || err);
+        } else {
+          console.error("Non-network error, not retrying:", err);
+          throw err;
+        }
+
+        if (attempt < maxAttempts) {
+          const backoffMs = 1000 * attempt;
+          console.info(`Waiting ${backoffMs}ms before retry...`);
+          await new Promise(r => setTimeout(r, backoffMs));
+        }
+      }
     }
+    throw lastError;
   }
 
   form.addEventListener("submit", async (e) => {
@@ -64,49 +87,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setSubmitting(true);
     try {
-      const res = await sendPayloadWithRetry(payload, 10000);
+      const res = await sendPayloadWithRetry(payload, { timeout: 15000, attempts: 2 });
 
       if (!res) {
-        console.error("No response object returned from fetch.");
+        console.error("No response object returned.");
         alert("No response from server. Try again later.");
         return;
       }
 
-      // try to get helpful error text if server returns non-2xx
+      // parse body safely
       const ct = res.headers.get("content-type") || "";
       let bodyText = "";
       try {
         bodyText = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
-      } catch (parseErr) {
-        bodyText = await res.text().catch(() => "");
+      } catch {
+        bodyText = "";
       }
 
       if (res.ok) {
-        const successMsg = `Hello ${name}, your message was sent successfully! 💖 Thanks for filling the form.`;
-        alert(successMsg);
+        alert(`Hello ${name}, your message was sent successfully! 💖`);
         form.reset();
-        console.info("Contact sent successfully:", bodyText || res.status);
+        console.info("Contact success:", bodyText || res.status);
       } else {
-        console.error("Server returned error", res.status, bodyText);
-        // show server-sent message if present, else generic
-        const userMsg = bodyText ? `Server: ${truncate(bodyText, 240)}` : `Error sending message (${res.status}). Please try again.`;
-        alert(userMsg);
+        console.error("Server error:", res.status, bodyText);
+        alert(bodyText || `Error ${res.status}. Please try again.`);
       }
     } catch (err) {
-      // better differentiation of errors for developer debugging and user
-      console.error("Send failed:", err);
+      console.error("Final send error:", err);
       if (err.name === "AbortError") {
         alert("Request timed out. Please try again.");
+      } else if (err instanceof TypeError) {
+        alert("Network error. Please check your connection and try again.");
       } else {
-        alert("Network or server error. Please try again.");
+        alert("Server error. Please try again.");
       }
     } finally {
       setSubmitting(false);
     }
   });
-
-  function truncate(str, n) {
-    if (!str) return "";
-    return str.length > n ? str.slice(0, n - 1) + "…" : str;
-  }
 });
