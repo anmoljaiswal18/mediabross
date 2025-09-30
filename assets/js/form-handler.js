@@ -1,65 +1,110 @@
-// index.js
-const express = require("express");
-const cors = require("cors");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+// form-handler.js (frontend only, no require)
+document.addEventListener("DOMContentLoaded", () => {
+  const ENDPOINT = "https://mediabross-backend.onrender.com/api/contact";
+  const form = document.getElementById("contact-form");
+  if (!form) return;
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+  const submitBtn = form.querySelector("button[type='submit']");
 
-app.use(cors());
-app.use(express.json());
-
-// create transporter once
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  pool: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Gmail app password
-  },
-  connectionTimeout: 10000,
-  socketTimeout: 10000,
-});
-
-// health check
-app.get("/", (req, res) => {
-  res.json({ status: "ok", service: "Mediabross backend" });
-});
-
-app.post("/api/contact", (req, res) => {
-  const { name, email, message } = req.body;
-  if (!name || !email || !message) {
-    return res.status(400).json({ success: false, message: "Missing fields." });
+  function setSubmitting(isSubmitting) {
+    if (!submitBtn) return;
+    submitBtn.disabled = isSubmitting;
+    submitBtn.textContent = isSubmitting ? "Sending..." : "Send Message Now";
   }
 
-  // ✅ respond immediately so frontend doesn't hang
-  res.status(202).json({ success: true, message: "Accepted — processing in background" });
+  async function postWithTimeout(url, data, timeout = 15000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
 
-  // send emails in background (non-blocking)
-  (async () => {
     try {
-      await transporter.sendMail({
-        from: email,
-        to: process.env.EMAIL_USER,
-        subject: `📩 New Contact from ${name}`,
-        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p>${message}</p>`,
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        signal: controller.signal,
       });
-
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "🎉 Thanks for contacting Mediabross!",
-        html: `<p>Thanks ${name}, we received your message.</p>`,
-      });
-
-      console.log(`✉️ Emails sent for ${email}`);
-    } catch (err) {
-      console.error("❌ Email send failed:", err.message || err);
+      return res;
+    } finally {
+      clearTimeout(timer);
     }
-  })();
-});
+  }
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  async function sendPayloadWithRetry(payload, opts = {}) {
+    const timeout = opts.timeout || 15000;
+    const maxAttempts = opts.attempts || 2;
+    let attempt = 0;
+    let lastError = null;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        console.info(`Attempt ${attempt}/${maxAttempts}`);
+        const res = await postWithTimeout(ENDPOINT, payload, timeout);
+        return res;
+      } catch (err) {
+        lastError = err;
+        if (err.name === "AbortError") {
+          console.warn(`Attempt ${attempt} aborted (timeout).`);
+        } else if (err instanceof TypeError) {
+          console.warn(`Attempt ${attempt} network error:`, err.message);
+        } else {
+          throw err;
+        }
+
+        if (attempt < maxAttempts) {
+          const backoff = 1000 * attempt;
+          console.info(`Retrying after ${backoff}ms...`);
+          await new Promise(r => setTimeout(r, backoff));
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = (document.getElementById("name")?.value || "").trim();
+    const email = (document.getElementById("email")?.value || "").trim();
+    const message = (document.getElementById("message")?.value || "").trim();
+
+    if (!name || !email || !message) {
+      alert("Please fill in name, email, and message.");
+      return;
+    }
+
+    const payload = { name, email, message };
+    setSubmitting(true);
+
+    try {
+      const res = await sendPayloadWithRetry(payload);
+
+      if (!res) {
+        alert("No response from server. Try again later.");
+        return;
+      }
+
+      let bodyText = "";
+      const ct = res.headers.get("content-type") || "";
+      try {
+        bodyText = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
+      } catch {}
+
+      if (res.ok) {
+        alert(`Hello ${name}, your message was sent successfully! 💖`);
+        form.reset();
+      } else {
+        alert(bodyText || `Server error (${res.status}). Please try again.`);
+      }
+    } catch (err) {
+      console.error("Send failed:", err);
+      if (err.name === "AbortError") {
+        alert("Request timed out. Please try again.");
+      } else {
+        alert("Network/Server error. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  });
 });
